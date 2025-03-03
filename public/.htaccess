@@ -1,0 +1,15 @@
+# Prevent direct access to uploaded files
+<FilesMatch "\.(pdf)$">
+    Header set Content-Disposition "inline"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>
+
+# Block access to the uploads folder directly
+<Directory "/uploads">
+    Order Deny,Allow
+    Deny from all
+</Directory>
