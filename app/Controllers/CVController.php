@@ -128,6 +128,7 @@ class CVController extends ResourceController {
             return $this->response->setStatusCode(404)->setBody("File not found.");
         }
     
+        
         // Set secure headers to prevent downloads
         $this->response->setHeader('Content-Type', 'application/pdf');
         $this->response->setHeader('Content-Disposition', 'inline; filename="' . $cv->file_name . '"');
