@@ -48,6 +48,18 @@
             -moz-user-select: none;
             -ms-user-select: none;
         }
+        /* Hide content during print attempt */
+        @media print {
+            .cv-container, .cv-page, .cv-canvas, body * {
+                display: none !important;
+            }
+            body:after {
+                content: 'Printing is disabled for security reasons.';
+                color: #000;
+                font-size: 20px;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -80,17 +92,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
 
     <script>
+        // Flag to track print attempts
+        let printBlocked = false;
+
         // Disable right-click
         document.addEventListener('contextmenu', event => {
             event.preventDefault();
             alert('Right-click is disabled for security reasons.');
         });
 
-        // Disable print
+        // Enhanced print prevention
         window.addEventListener('beforeprint', event => {
-            event.preventDefault();
-            alert('Printing is disabled for security reasons.');
+            if (!printBlocked) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                alert('Printing is disabled for security reasons.');
+                printBlocked = true;
+                // Force a redirect to prevent dialog
+                window.location.href = window.location.href; // Redirect to self to cancel print
+                setTimeout(() => { printBlocked = false; }, 1000); // Reset flag after 1 second
+            }
         });
+
+        // Override window.print() with a loop to block printing
+        const originalPrint = window.print;
+        window.print = function() {
+            if (!printBlocked) {
+                alert('Printing is disabled for security reasons.');
+                printBlocked = true;
+                // Create an infinite loop to block the dialog until user interaction
+                let i = 0;
+                while (i < 1000000 && printBlocked) {
+                    i++;
+                }
+                setTimeout(() => { printBlocked = false; }, 1000); // Reset flag after 1 second
+                throw new Error('Printing disabled');
+            }
+            return false;
+        };
 
         // Disable copy-paste
         document.addEventListener('copy', event => {
