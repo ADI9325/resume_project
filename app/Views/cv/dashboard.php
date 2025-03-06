@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My CV Dashboard</title>
     <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -9,6 +11,7 @@
             max-width: 800px;
             margin: 0 auto;
             position: relative;
+            transition: filter 0.3s ease;
         }
         .cv-page {
             margin-bottom: 20px;
@@ -16,6 +19,7 @@
             border: 1px solid #ddd;
             background-color: #fff;
             position: relative;
+            overflow: hidden;
         }
         .cv-canvas {
             width: 100%;
@@ -29,6 +33,7 @@
             height: 100%;
             background: transparent;
             z-index: 10;
+            pointer-events: none;
         }
         .error-message {
             color: red;
@@ -41,14 +46,9 @@
             color: #666;
             margin: 20px 0;
         }
-        /* Disable text selection */
         body {
             user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
         }
-        /* Hide content during print attempt */
         @media print {
             .cv-container, .cv-page, .cv-canvas, body * {
                 display: none !important;
@@ -63,89 +63,79 @@
     </style>
 </head>
 <body>
-    <!-- Dynamic content will be injected by JavaScript to obscure source -->
-    <div id="dynamic-content"></div>
 
-    <script>
-        // Inject content dynamically to make source harder to read
-        document.getElementById('dynamic-content').innerHTML = `
-            <div class="container mt-5">
-                <h2>My CV</h2>
-                <?php if ($cv): ?>
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">My Uploaded CV</h5>
-                            <p class="card-text">File: <?= esc($cv->file_name) ?></p>
-                            <div id="cv-container" class="cv-container">
-                                <div id="loading" class="loading-message">Loading CV...</div>
-                            </div>
-                            <div id="error-message" class="error-message" style="display: none;"></div>
-                        </div>
+    <div class="container mt-5">
+        <h2>My CV</h2>
+        <?php if ($cv): ?>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">My Uploaded CV</h5>
+                    <p class="card-text">File: <?= esc($cv->file_name) ?></p>
+                    <div id="cv-container" class="cv-container">
+                        <div id="loading" class="loading-message">Loading CV...</div>
                     </div>
-                <?php else: ?>
-                    <a href="/cv/upload" class="btn btn-primary">Upload CV</a>
-                <?php endif; ?>
-        `;
-    </script>
+                    <div id="error-message" class="error-message" style="display: none;"></div>
+                </div>
+            </div>
+        <?php else: ?>
+            <a href="/cv/upload" class="btn btn-primary">Upload CV</a>
+        <?php endif; ?>
+    </div>
 
-    <!-- Include PDF.js from CDN -->
+    <!-- Include PDF.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
 
     <script>
-        // Flag to track print attempts
-        let printBlocked = false;
+        let screenBlackoutTriggered = false;
+
+        // Function to black out the screen for 1 second
+        function blackOutScreen() {
+            if (screenBlackoutTriggered) return;
+            screenBlackoutTriggered = true;
+
+            document.body.style.backgroundColor = 'black';
+            document.body.style.color = 'black';
+            document.body.innerHTML = '';
+
+            setTimeout(() => {
+                location.reload(); // Restore content after 1 second
+            }, 1000);
+        }
+
+        // Disable PrintScreen key press
+        document.addEventListener('keyup', function(event) {
+            if (event.key === 'PrintScreen' || event.keyCode === 44) {
+                navigator.clipboard.writeText('Screenshots are disabled for security reasons.'); // Overwrite clipboard
+                blackOutScreen();
+            }
+        });
+
+        // Detect tab switching or minimizing
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                blackOutScreen();
+            }
+        });
+
+        // Detect focus loss (clicking outside the window)
+        window.addEventListener('blur', function() {
+            blackOutScreen();
+        });
 
         // Disable right-click
-        document.addEventListener('contextmenu', event => {
-            event.preventDefault();
-            alert('Right-click is disabled for security reasons.');
-        });
+        document.addEventListener('contextmenu', event => event.preventDefault());
 
-        // Enhanced print prevention
-        window.addEventListener('beforeprint', event => {
-            if (!printBlocked) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                alert('Printing is disabled for security reasons.');
-                printBlocked = true;
-                // Force a redirect to prevent dialog
-                window.location.href = window.location.href; // Redirect to self to cancel print
-                setTimeout(() => { printBlocked = false; }, 1000); // Reset flag after 1 second
-            }
-        });
-
-        // Override window.print() with a loop to block printing
-        const originalPrint = window.print;
-        window.print = function() {
-            if (!printBlocked) {
-                alert('Printing is disabled for security reasons.');
-                printBlocked = true;
-                // Create an infinite loop to block the dialog until user interaction
-                let i = 0;
-                while (i < 1000000 && printBlocked) {
-                    i++;
-                }
-                setTimeout(() => { printBlocked = false; }, 1000); // Reset flag after 1 second
-                throw new Error('Printing disabled');
-            }
-            return false;
-        };
-
-        // Disable copy-paste
-        document.addEventListener('copy', event => {
-            event.preventDefault();
-            alert('Copying is disabled for security reasons.');
-        });
-
-        // Disable "View Source" (Ctrl+U or Ctrl+Shift+U)
+        // Disable Developer Tools (F12, Ctrl+U, Ctrl+Shift+I)
         document.addEventListener('keydown', function(event) {
             if ((event.ctrlKey || event.metaKey) && (event.key === 'u' || event.key === 'U')) {
                 event.preventDefault();
-                alert('Viewing source is disabled for security reasons.');
+            }
+            if ((event.ctrlKey && event.shiftKey && event.key === 'I') || event.key === 'F12') {
+                event.preventDefault();
             }
         });
 
-        // Configure PDF.js worker
+        // PDF.js Worker Configuration
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
 
         // Load and render the PDF
@@ -159,40 +149,29 @@
 
                 pdfjsLib.getDocument(url).promise.then(function(pdf) {
                     const totalPages = pdf.numPages;
-
-                    // Hide loading message once the PDF is loaded
                     loadingDiv.style.display = 'none';
 
-                    // Loop through all pages and render each one
                     for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-                        // Create a div for each page
                         const pageDiv = document.createElement('div');
                         pageDiv.className = 'cv-page';
 
-                        // Create a canvas for each page
                         const canvas = document.createElement('canvas');
                         canvas.className = 'cv-canvas';
                         pageDiv.appendChild(canvas);
 
-                        // Create a transparent overlay to prevent interaction
                         const overlay = document.createElement('div');
                         overlay.className = 'overlay';
                         pageDiv.appendChild(overlay);
 
-                        // Append the page div to the container
                         container.appendChild(pageDiv);
 
-                        // Render the page
                         pdf.getPage(pageNum).then(function(page) {
                             const viewport = page.getViewport({ scale: 1.0 });
                             canvas.height = viewport.height;
                             canvas.width = viewport.width;
 
                             const context = canvas.getContext('2d');
-                            const renderContext = {
-                                canvasContext: context,
-                                viewport: viewport
-                            };
+                            const renderContext = { canvasContext: context, viewport: viewport };
                             page.render(renderContext);
                         }).catch(function(error) {
                             errorDiv.style.display = 'block';
@@ -207,5 +186,6 @@
             <?php endif; ?>
         });
     </script>
+
 </body>
 </html>
