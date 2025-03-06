@@ -9,17 +9,24 @@ class CVController extends ResourceController {
     protected $cvRepo;
 
     public function __construct() {
-        $this->cvRepo = Services::cvRepository(); 
+        $this->cvRepo = Services::cvRepository();
     }
 
     public function upload() {
+        if (!session()->get('user_id')) {
+            return redirect()->to('/auth/login');
+        }
+
+        $userId = session()->get('user_id');
+        $existingCv = $this->cvRepo->findByUserId($userId);
+
+        if ($existingCv) {
+            return redirect()->to('/cv/dashboard');
+        }
+
         if ($this->request->isAJAX()) {
             if (!$this->request->is('post')) {
                 return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
-            }
-
-            if (!session()->get('user_id')) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Please log in']);
             }
 
             $file = $this->request->getFile('cv_file');
@@ -32,10 +39,16 @@ class CVController extends ResourceController {
             }
 
             $newName = $file->getRandomName();
-            $file->move(FCPATH . 'uploads', $newName);
+            $uploadPath = FCPATH . 'uploads';
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+
+            $file->move($uploadPath, $newName);
+            log_message('debug', 'File uploaded to: ' . $uploadPath . '/' . $newName);
 
             $data = [
-                'user_id' => session()->get('user_id'),
+                'user_id' => $userId,
                 'file_name' => $newName,
             ];
             $cvId = $this->cvRepo->save($data);
@@ -43,14 +56,25 @@ class CVController extends ResourceController {
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'CV uploaded successfully',
-                'cv_id' => $cvId
+                'cv_id' => $cvId,
+                'redirect' => '/cv/dashboard'
             ]);
-        } else {
-            if (!session()->get('user_id')) {
-                return redirect()->to('/auth/login');
-            }
-            return view('cv/upload');
         }
+        return view('cv/upload');
+    }
+
+    public function dashboard() {
+        if (!session()->get('user_id')) {
+            return redirect()->to('/auth/login');
+        }
+
+        $userId = session()->get('user_id');
+        $cv = $this->cvRepo->findByUserId($userId);
+
+        return view('cv/dashboard', [
+            'cv' => $cv ? $cv[0] : null,
+            'baseUrl' => base_url()
+        ]);
     }
 
     public function adminDashboard() {
@@ -59,96 +83,61 @@ class CVController extends ResourceController {
         }
 
         $roleId = (int)session()->get('role_id');
-        log_message('debug', 'Current role_id (integer): ' . $roleId);
-
         if ($roleId !== 1) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Unauthorized access']);
         }
 
         $cvs = $this->cvRepo->findAll();
-        return view('dashboard/admin_dashboard', ['cvs' => $cvs]);
+        return view('dashboard/admin_dashboard', ['cvs' => $cvs, 'baseUrl' => base_url()]);
     }
 
-    // CVs functions
-
-    public function view($cvId = null) {
-        if (!$cvId) {
-            return redirect()->to('/dashboard');
-        }
+    public function protectedView($id) {
+        log_message('debug', 'protectedView called for CV ID: ' . $id);
+        log_message('debug', 'Session user_id: ' . (session()->get('user_id') ?? 'Not set'));
 
         if (!session()->get('user_id')) {
+            log_message('error', 'No user_id in session, redirecting to login');
             return redirect()->to('/auth/login');
         }
 
-        $cv = $this->cvRepo->findById($cvId);
+        $cv = $this->cvRepo->findById($id);
         if (!$cv) {
-            throw new \CodeIgniter\Exceptions\PageNotFoundException('CV not found');
+            log_message('error', 'CV not found for ID: ' . $id);
+            return $this->response->setStatusCode(404)->setBody("CV not found.");
         }
 
         $userId = session()->get('user_id');
-        $roleId = (int)session()->get('role_id'); 
-        $isAdmin = $roleId == 1;
+        $roleId = (int)session()->get('role_id');
+        $isAdmin = $roleId === 1;
+
+        log_message('debug', 'User ID: ' . $userId . ', Role ID: ' . $roleId . ', Is Admin: ' . ($isAdmin ? 'Yes' : 'No'));
 
         if ($cv->user_id !== $userId && !$isAdmin) {
-            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Unauthorized access']);
+            log_message('error', 'Unauthorized access for user_id: ' . $userId . ' to CV ID: ' . $id);
+            return $this->response->setStatusCode(403)->setBody("Unauthorized access.");
         }
 
         $filePath = FCPATH . 'uploads/' . $cv->file_name;
+        log_message('debug', 'Attempting to access file at: ' . $filePath);
         if (!file_exists($filePath)) {
-            throw new \CodeIgniter\Exceptions\PageNotFoundException('File not found');
+            log_message('error', 'File not found at: ' . $filePath);
+            return $this->response->setStatusCode(404)->setBody("File not found at: " . $filePath);
         }
 
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline');
-        header('X-Content-Type-Options: nosniff');
-        header("Content-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'none'");
-        header('X-Frame-Options: SAMEORIGIN');
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-        header('Pragma: no-cache');
-        header('Expires: -1');
-        header('X-Download-Options: noopen');
-        header('Content-Length: ' . filesize($filePath));
-        header('Accept-Ranges: none');
+        $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'inline; filename="' . $cv->file_name . '"')
+            ->setHeader('X-Download-Options', 'noopen')
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setHeader('Pragma', 'no-cache')
+            ->setHeader('Expires', '0')
+            ->setHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->setHeader('Access-Control-Allow-Origin', 'http://localhost:8080') 
+            ->setHeader('Content-Security-Policy', "default-src 'self'; object-src 'self'; script-src 'self' https://cdnjs.cloudflare.com;")
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setHeader('Content-Length', filesize($filePath))
+            ->setHeader('Accept-Ranges', 'none');
 
-        readfile($filePath);
-        exit;
-    }
-
-    public function protectedView($id)
-    {
-        $cv = $this->cvModel->find($id);
-        
-        if (!$cv) {
-            return $this->response->setStatusCode(404)->setBody("File not found.");
-        }
-    
-        $filePath = WRITEPATH . 'uploads/' . $cv->file_name;
-    
-        if (!file_exists($filePath)) {
-            return $this->response->setStatusCode(404)->setBody("File not found.");
-        }
-    
-        // Set secure headers to prevent downloads
-        $this->response->setHeader('Content-Type', 'application/pdf');
-        $this->response->setHeader('Content-Disposition', 'inline; filename="' . $cv->file_name . '"');
-        $this->response->setHeader('X-Download-Options', 'noopen'); // Prevent direct download
-        $this->response->setHeader('Content-Security-Policy', "script-src 'none'; object-src 'none';"); // Restrict object embedding
-        $this->response->setHeader('Feature-Policy', "fullscreen 'none'; print 'none'"); // Prevent fullscreen & print
-        
         return $this->response->setBody(file_get_contents($filePath));
     }
-    
-
-    public function listCvs() {
-        if (!session()->get('user_id')) {
-            return redirect()->to('/auth/login');
-        }
-
-        $userId = session()->get('user_id');
-        $cvs = $this->cvRepo->findByUserId($userId);
-
-        return view('cv/list', ['cvs' => $cvs]);
-    }
-
-    
 }
