@@ -3,50 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
-    <script src="/assets/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>Login - CV Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border: none;
+            padding: 10px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+        .spinner-border {
+            display: none;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
     <div class="container d-flex justify-content-center align-items-center vh-100">
-        <div class="card p-4 shadow" style="max-width: 400px; width: 100%;">
-            <h3 class="text-center mb-4">Login</h3>
-            <div id="message" class="alert d-none"></div>
-            <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" required>
-            </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" required>
-            </div>
-            <button id="loginBtn" class="btn btn-primary w-100">Login</button>
-            <p class="text-center mt-3">Don't have an account? <a href="/auth/register">Register</a></p>
+        <div class="card p-4" style="max-width: 400px; width: 100%;">
+            <h3 class="text-center mb-4 text-primary">Login</h3>
+            <div id="message" class="alert d-none text-center" role="alert"></div>
+            <form id="loginForm" novalidate>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required placeholder="Enter your email">
+                    <div class="invalid-feedback">Please enter a valid email address.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" required placeholder="Enter your password">
+                    <div class="invalid-feedback">The password field is required.</div>
+                </div>
+                <button type="submit" id="loginBtn" class="btn btn-primary w-100">
+                    Login
+                    <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+            <p class="text-center mt-3">Don't have an account? <a href="/auth/register" class="text-primary fw-bold">Register</a></p>
         </div>
     </div>
-    <script>
-        $(document).ready(function() {
-            $('#loginBtn').click(function() {
-                $.ajax({
-                    url: '/auth/login',
-                    method: 'POST',
-                    data: { email: $('#email').val(), password: $('#password').val() },
-                    success: function(response) {
-                        $('#message').removeClass('d-none alert-danger alert-success')
-                            .addClass(response.success ? 'alert-success' : 'alert-danger')
-                            .text(response.message);
-                        if (response.success) {
-                            setTimeout(() => location.href = response.redirect, 1000); // Use the redirect URL from the response
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        $('#message').removeClass('d-none alert-success').addClass('alert-danger').text('Login failed: ' + error);
-                        console.log('Error:', xhr.responseText, status, error);
-                    }
-                });
-            });
-        });
-    </script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="<?= base_url('assets/js/login.js') ?>"></script>
 </body>
 </html>

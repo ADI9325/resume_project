@@ -102,7 +102,6 @@ class CVController extends ResourceController {
 
         $cv = $this->cvRepo->findById($id);
         if (!$cv) {
-            log_message('error', 'CV not found for ID: ' . $id);
             return $this->response->setStatusCode(404)->setBody("CV not found.");
         }
 

@@ -10,12 +10,21 @@ class UserRepository {
         $this->db = $db;
     }
 
-    public function findByEmail($email) {
-        return $this->db->table('users')->where('email', $email)->get()->getRow();
+    public function findByEmail(string $email) {
+        return $this->db->table('users')
+                        ->where('LOWER(email)', strtolower($email))
+                        ->get()
+                        ->getRow();
     }
 
     public function create($data) {
-        $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+        if (!isset($data['password']) || empty($data['password'])) {
+            throw new \Exception("Password is required.");
+        }
+        if (!password_get_info($data['password'])['algo']) { 
+            $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+        }
+
         $this->db->table('users')->insert($data);
         return $this->db->insertID();
     }
