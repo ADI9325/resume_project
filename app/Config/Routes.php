@@ -16,3 +16,4 @@ $routes->get('/auth/register', [AuthController::class, 'register']);
 $routes->post('/auth/register', [AuthController::class, 'register']);
 $routes->get('/admin/dashboard', [CVController::class, 'adminDashboard']);
 $routes->get('/cv/protectedView/(:num)', [CVController::class, 'protectedView']);
+$routes->get('/auth/logout', 'AuthController::logout');
