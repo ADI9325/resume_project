@@ -5,7 +5,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 document.addEventListener("DOMContentLoaded", function () {
   let screenBlackoutTriggered = false;
 
-  // Function to black out the screen for 1 second
   function blackOutScreen() {
     if (screenBlackoutTriggered) return;
     screenBlackoutTriggered = true;
@@ -15,11 +14,10 @@ document.addEventListener("DOMContentLoaded", function () {
     document.body.innerHTML = "";
 
     setTimeout(() => {
-      location.reload(); // Restore content after 1 second
+      location.reload();
     }, 1000);
   }
 
-  // Disable PrintScreen key press
   document.addEventListener("keyup", function (event) {
     if (event.key === "PrintScreen" || event.keyCode === 44) {
       navigator.clipboard.writeText(
@@ -41,10 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
     blackOutScreen();
   });
 
-  // Disable right-click
   document.addEventListener("contextmenu", (event) => event.preventDefault());
-
-  // Disable Developer Tools (F12, Ctrl+U, Ctrl+Shift+I)
   document.addEventListener("keydown", function (event) {
     if (
       (event.ctrlKey || event.metaKey) &&
@@ -62,14 +57,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Function to render CV
   window.renderCV = function (url) {
-    console.log("Rendering CV with URL:", url); // Debug
+    console.log("Rendering CV with URL:", url);
     const container = document.getElementById("cv-container");
     const errorDiv = document.getElementById("error-message");
 
     pdfjsLib
       .getDocument(url)
       .promise.then(function (pdf) {
-        console.log("PDF loaded successfully, total pages:", pdf.numPages); // Debug
+        console.log("PDF loaded successfully, total pages:", pdf.numPages);
         const totalPages = pdf.numPages;
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
@@ -89,21 +84,26 @@ document.addEventListener("DOMContentLoaded", function () {
           pdf
             .getPage(pageNum)
             .then(function (page) {
-              const viewport = page.getViewport({ scale: 1.0 });
-              canvas.height = viewport.height;
+              const viewport = page.getViewport({ scale: 3.0 });
               canvas.width = viewport.width;
+              canvas.height = viewport.height;
 
               const context = canvas.getContext("2d");
+
+              context.imageSmoothingEnabled = true;
+              context.imageSmoothingQuality = "high";
+
               const renderContext = {
                 canvasContext: context,
                 viewport: viewport,
               };
+
               page.render(renderContext).promise.then(function () {
-                console.log("Page rendered successfully:", pageNum); // Debug
+                console.log("Page rendered successfully:", pageNum);
               });
             })
             .catch(function (error) {
-              console.error("Error rendering page:", error); // Debug
+              console.error("Error rendering page:", error);
               errorDiv.style.display = "block";
               errorDiv.textContent =
                 "Error rendering page " + pageNum + ": " + error.message;
@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       })
       .catch(function (error) {
-        console.error("Error loading PDF:", error); // Debug
+        console.error("Error loading PDF:", error);
         errorDiv.style.display = "block";
         errorDiv.textContent = "Error loading PDF: " + error.message;
       });

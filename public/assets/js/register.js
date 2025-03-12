@@ -1,7 +1,4 @@
 $(document).ready(function () {
-  /**
-   * Handles register form submission with AJAX
-   */
   $("#registerForm").on("submit", function (e) {
     e.preventDefault();
 
@@ -12,12 +9,15 @@ $(document).ready(function () {
     $spinner.show();
     $btn.prop("disabled", true);
     $message.addClass("d-none").removeClass("alert-success alert-danger");
-    const formData = $(this).serialize();
+
+    const formData = new FormData(this);
 
     $.ajax({
       url: "/auth/register",
       method: "POST",
       data: formData,
+      processData: false,
+      contentType: false,
       success: function (response) {
         $spinner.hide();
         $btn.prop("disabled", false);

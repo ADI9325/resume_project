@@ -38,7 +38,7 @@
         <div class="card p-4" style="max-width: 400px; width: 100%;">
             <h3 class="text-center mb-4 text-primary">Register</h3>
             <div id="message" class="alert d-none text-center" role="alert"></div>
-            <form id="registerForm" novalidate>
+            <form id="registerForm" enctype="multipart/form-data" novalidate>
                 <div class="mb-3">
                     <label for="name" class="form-label">Full Name</label>
                     <input type="text" class="form-control" id="name" name="name" required placeholder="Enter your full name">
@@ -53,6 +53,11 @@
                     <label for="phone" class="form-label">Phone Number</label>
                     <input type="tel" class="form-control" id="phone" name="phone" required placeholder="Enter your phone number">
                     <div class="invalid-feedback">The phone number field is required.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="profile_image" class="form-label">Profile Image</label>
+                    <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*">
+                    <div class="invalid-feedback">Please upload a valid image file.</div>
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Password</label>

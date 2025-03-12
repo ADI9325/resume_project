@@ -31,6 +31,11 @@ class CreateUsersTable extends Migration {
                 'type' => 'VARCHAR',
                 'constraint' => '255',
             ],
+            'profile_image' => [
+                'type' => 'VARCHAR',
+                'constraint' => '255',
+                'null' => true,
+            ],
             'role_id' => [
                 'type' => 'INT',
                 'constraint' => 11,
