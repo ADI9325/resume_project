@@ -17,6 +17,13 @@ class UserRepository {
                         ->getRow();
     }
 
+    public function findById(int $id) {
+        return $this->db->table('users')
+                        ->where('id', $id)
+                        ->get()
+                        ->getRow();
+    }
+
     public function create($data) {
         if (!isset($data['password']) || empty($data['password'])) {
             throw new \Exception("Password is required.");

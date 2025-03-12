@@ -65,8 +65,7 @@ class AuthController extends ResourceController {
                 'name' => 'required|min_length[2]|max_length[100]',
                 'email' => 'required|valid_email|is_unique[users.email]',
                 'phone' => 'required|min_length[10]|max_length[20]',
-                'password' => 'required|min_length[6]',
-                'profile_image' => 'uploaded[profile_image]|max_size[profile_image,1024]|is_image[profile_image]'
+                'password' => 'required|min_length[6]'
             ];
 
             if (!$this->validate($validationRules)) {
@@ -77,20 +76,11 @@ class AuthController extends ResourceController {
                 ]);
             }
 
-            // Handle file upload
-            $profileImage = $this->request->getFile('profile_image');
-            $imageName = null;
-            if ($profileImage && $profileImage->isValid()) {
-                $imageName = $profileImage->getRandomName();
-                $profileImage->move(ROOTPATH . 'public/uploads/profiles', $imageName);
-            }
-
             $data = [
                 'name' => $this->request->getPost('name', FILTER_SANITIZE_STRING),
                 'email' => $this->request->getPost('email', FILTER_SANITIZE_EMAIL),
                 'phone' => $this->request->getPost('phone', FILTER_SANITIZE_STRING),
-                'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
-                'profile_image' => $imageName,
+                'password' => $this->request->getPost('password'),
                 'role_id' => 2
             ];
 
@@ -103,10 +93,6 @@ class AuthController extends ResourceController {
                     'redirect' => '/cv/upload'
                 ]);
             } catch (\Exception $e) {
-                // Delete uploaded image if registration fails
-                if ($imageName && file_exists(ROOTPATH . 'public/uploads/profiles/' . $imageName)) {
-                    unlink(ROOTPATH . 'public/uploads/profiles/' . $imageName);
-                }
                 log_message('error', 'Registration failed: ' . $e->getMessage());
                 return $this->response->setJSON([
                     'success' => false,
@@ -121,5 +107,23 @@ class AuthController extends ResourceController {
     public function logout() {
         session()->destroy();
         return redirect()->to('/auth/login');
+    }
+
+    public function profile() {
+        if (!session()->get('user_id')) {
+            return redirect()->to('/auth/login');
+        }
+
+        $userId = session()->get('user_id');
+        $user = $this->userRepo->findById($userId);
+
+        if (!$user) {
+            return $this->response->setStatusCode(404)->setBody("User not found.");
+        }
+
+        return view('auth/profile', [
+            'user' => $user,
+            'baseUrl' => base_url()
+        ]);
     }
 }

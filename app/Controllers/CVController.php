@@ -109,8 +109,6 @@ class CVController extends ResourceController {
         $roleId = (int)session()->get('role_id');
         $isAdmin = $roleId === 1;
 
-        log_message('debug', 'User ID: ' . $userId . ', Role ID: ' . $roleId . ', Is Admin: ' . ($isAdmin ? 'Yes' : 'No'));
-
         if ($cv->user_id !== $userId && !$isAdmin) {
             log_message('error', 'Unauthorized access for user_id: ' . $userId . ' to CV ID: ' . $id);
             return $this->response->setStatusCode(403)->setBody("Unauthorized access.");
